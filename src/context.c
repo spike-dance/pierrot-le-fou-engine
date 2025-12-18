@@ -35,7 +35,7 @@ Vulkan_context create_context(GLFWwindow* window)
         context.swapchain = create_swapchain(context.physical_device, context.device, context.surface, &context.swap_extent);
 
         return context; //END
-//_________________________________________________
+//__________________________________________________
 
 
 ERROR:
