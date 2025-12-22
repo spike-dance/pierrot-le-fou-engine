@@ -35,9 +35,10 @@ typedef struct Vulkan_context
 
         VkSurfaceKHR surface;
 
-        int image_count;
         VkSwapchainKHR swapchain;
         VkFormat swapchain_format;
+
+        int image_count;
         VkImage* swapchain_image;
         VkImageView* swapchain_image_view;
 
@@ -60,6 +61,8 @@ Queue_family_indice find_queue_family(VkPhysicalDevice physical_device);
 
 VkDevice create_device(VkPhysicalDevice physical_device, Queue_family_indice queue_family_indice);
 
-VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkExtent2D* swap_extent);
+VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkFormat* swapchain_format);
+
+VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchain_format, VkImage* swapchain_image, int image_count);
 
 #endif

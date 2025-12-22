@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(pierrot-le-fou-engine)
 
 include_directories(include)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 set(SOURCE src/context.c
         src/global_variable.c

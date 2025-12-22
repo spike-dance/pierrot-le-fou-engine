@@ -32,7 +32,19 @@ Vulkan_context create_context(GLFWwindow* window)
 
         glfwCreateWindowSurface(context.instance, window, NULL, &context.surface);
 
-        context.swapchain = create_swapchain(context.physical_device, context.device, context.surface, &context.swap_extent);
+        context.swapchain = create_swapchain(context.physical_device, context.device, context.surface, &context.swapchain_format);
+        if(context.swapchain == VK_NULL_HANDLE)
+                goto ERROR;
+
+        vkGetSwapchainImagesKHR(context.device, context.swapchain, &context.image_count, NULL);
+        context.swapchain_image = malloc(sizeof(VkImage) * context.image_count);
+        vkGetSwapchainImagesKHR(context.device, context.swapchain, &context.image_count, context.swapchain_image);
+
+        context.swapchain_image_view = get_swapchain_image_view(context.device, context.swapchain, context.swapchain_format, context.swapchain_image, context.image_count);
+        if(context.swapchain_image_view == NULL)
+                goto ERROR;
+
+        printf("context creation success\n");
 
         return context; //END
 //__________________________________________________
@@ -205,9 +217,7 @@ VkDevice create_device(VkPhysicalDevice physical_device, Queue_family_indice que
         printf("validation_layer = %d\n", validation_layer_count);
         printf("\n\n%s\n\n", validation_layer[0]);
 
-        printf("test\n");
         VkResult result = vkCreateDevice(physical_device, &create_info, NULL, &device);
-        printf("test\n");
         if(result != VK_SUCCESS)
         {
                 fprintf(stderr, "Error : physical device creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
@@ -217,21 +227,151 @@ VkDevice create_device(VkPhysicalDevice physical_device, Queue_family_indice que
         return device;
 }
 
-VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkExtent2D* swap_extent)
+VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkFormat* swapchain_format)
 {
         VkSwapchainKHR swapchain;
 
-        VkResult result = vkCreateSwapchainKHR(device, NULL, NULL, NULL);
+        VkSurfaceCapabilitiesKHR capability;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &capability);
+
+        VkSurfaceFormatKHR* format_vec;
+        VkSurfaceFormatKHR format;
+
+        int format_count;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, NULL);
+        format_vec = malloc(sizeof(VkSurfaceFormatKHR) * format_count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, format_vec);
+
+        bool format_found = false;
+        for(int i=0; i<format_count; i++)
+        {
+                if(format_vec[i].format == VK_FORMAT_B8G8R8A8_SRGB &&
+                   format_vec[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+                {
+                        printf("format found\n");
+                        format = format_vec[i];
+                        format_found = true;
+                        break;
+                }
+        }
+
+        if(!format_found)
+        {
+                format = format_vec[0];
+                printf("test\n");
+        }
+
+        free(format_vec);
+
+        VkPresentModeKHR* present_mode_vec;
+        VkPresentModeKHR present_mode;
+
+        int present_mode_count;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
+        present_mode_vec = malloc(sizeof(VkPresentModeKHR) * present_mode_count);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, present_mode_vec);
+
+        for(int i=0; i<present_mode_count; i++)
+        {
+                if(present_mode_vec[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+                {
+                        present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+                        break;
+                }
+        }
+
+        free(present_mode_vec);
+
+
+
+
+        VkSwapchainCreateInfoKHR create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+                        .surface = surface,
+
+                        .minImageCount = capability.minImageCount + 1,
+                        .imageFormat = format.format,
+                        .imageColorSpace = format.colorSpace,
+                        .imageExtent = capability.currentExtent,
+                        .imageArrayLayers = 1,
+                        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+
+                        .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+
+                        .preTransform = capability.currentTransform,
+
+                        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+
+                        .presentMode = present_mode,
+                        .clipped = VK_TRUE,
+                        .oldSwapchain = VK_NULL_HANDLE,
+                };
+
+
+
+
+
+        VkResult result = vkCreateSwapchainKHR(device, &create_info, NULL, &swapchain);
         if(result != VK_SUCCESS)
         {
                 fprintf(stderr, "Error : swap chain creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
                 return VK_NULL_HANDLE;
         }
+        *swapchain_format = format.format;
         return swapchain;
+}
+
+VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchain_format, VkImage* swapchain_image, int image_count)
+{
+        VkImageView* swapchain_image_view = malloc(sizeof(VkImageView) * image_count);
+
+        VkImageViewCreateInfo create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                        .format = swapchain_format,
+                        .components =
+                        {
+                                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                                .a = VK_COMPONENT_SWIZZLE_IDENTITY
+                        },
+                        .subresourceRange =
+                        {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = 1,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1,
+                        }
+                };
+
+        for(int i=0; i<image_count; i++)
+        {
+                create_info.image = swapchain_image[i];
+                VkResult result = vkCreateImageView(device, &create_info, NULL, &swapchain_image_view[i]);
+                if(result != VK_SUCCESS)
+                {
+                        fprintf(stderr, "Error : image view %d creation failed [%d] \"%s\"\n", i, result, get_vulkan_error(result));
+                        return NULL;
+                }
+        }
+
+        return swapchain_image_view;
 }
 
 void clear_context(Vulkan_context context)
 {
+        for(int i=0; i<context.image_count; i++)
+        {
+                vkDestroyImageView(context.device, context.swapchain_image_view[i], NULL);
+        }
+
+        free(context.swapchain_image);
+        free(context.swapchain_image_view);
+
         vkDestroySwapchainKHR(context.device, context.swapchain, NULL);
         vkDestroySurfaceKHR(context.instance, context.surface, NULL);
         vkDestroyDevice(context.device, NULL);

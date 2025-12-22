@@ -25,6 +25,8 @@ Main_state engine_loop()
         while(!running)
         {}
 
+        auto a=context.swapchain_image_view[0];
+
         clear_context(context);
         glfwDestroyWindow(window);
 
