@@ -293,7 +293,8 @@ VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice devic
                         .minImageCount = capability.minImageCount + 1,
                         .imageFormat = format.format,
                         .imageColorSpace = format.colorSpace,
-                        .imageExtent = capability.currentExtent,
+                        //.imageExtent = capability.currentExtent,
+                        .imageExtent = {800,500},
                         .imageArrayLayers = 1,
                         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 
