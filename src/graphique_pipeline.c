@@ -136,6 +136,20 @@ void create_vert_frag_graphique_pipeline(VkDevice device, char* vertex_file_path
                         .pDynamicStates = dynamic_state
                 };
 
+        VkPipelineLayoutCreateInfo pipeline_layout_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO
+                };
+
+        VkPipelineLayout pipeline_layout;
+
+        VkResult result = vkCreatePipelineLayout(device, &pipeline_layout_info, NULL, &pipeline_layout);
+        if(result != VK_SUCCESS)
+        {
+                fprintf(stderr, "Error : pipeline layout creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                return;
+        }
+
         vkDestroyShaderModule(device, fragment_shader_module, NULL);
         vkDestroyShaderModule(device, vertex_shader_module, NULL);
 }

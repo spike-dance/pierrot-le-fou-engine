@@ -44,6 +44,10 @@ Vulkan_context create_context(GLFWwindow* window)
         if(context.swapchain_image_view == NULL)
                 goto ERROR;
 
+        context.render_pass = create_render_pass(context.device, context.swapchain_format);
+        if(context.render_pass == VK_NULL_HANDLE)
+                goto ERROR;
+
         printf("context creation success\n");
 
         return context; //END
@@ -361,6 +365,56 @@ VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain,
         }
 
         return swapchain_image_view;
+}
+
+VkRenderPass create_render_pass(VkDevice device, VkFormat format)
+{
+        VkRenderPass render_pass;
+        VkAttachmentDescription attachment =
+                {
+                        .format = format,
+                        .samples = VK_SAMPLE_COUNT_1_BIT,
+
+                        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+
+                        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+
+                        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                };
+
+        VkAttachmentReference attachment_ref =
+                {
+                        .attachment = 0,
+                        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                };
+
+        VkSubpassDescription subpass =
+                {
+                        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+
+                        .colorAttachmentCount = 1,
+                        .pColorAttachments = &attachment_ref,
+                };
+
+        VkRenderPassCreateInfo create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                        .attachmentCount = 1,
+                        .pAttachments = &attachment,
+                        .subpassCount = 1,
+                        .pSubpasses = subpass
+                };
+
+        VkResult result = vkCreateRenderPass(device, &create_info, NULL, &render_pass);
+        if(result != VK_SUCCESS)
+        {
+                fprintf(stderr, "Error : render pass creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                return VK_NULL_HANDLE;
+        }
+        return render_pass;
 }
 
 void clear_context(Vulkan_context context)

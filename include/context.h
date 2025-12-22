@@ -44,6 +44,8 @@ typedef struct Vulkan_context
 
         VkExtent2D swap_extent;
 
+        VkRenderPass render_pass;
+
 } Vulkan_context;
 
 Vulkan_context create_context(GLFWwindow* window);
@@ -64,5 +66,7 @@ VkDevice create_device(VkPhysicalDevice physical_device, Queue_family_indice que
 VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkFormat* swapchain_format);
 
 VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchain_format, VkImage* swapchain_image, int image_count);
+
+VkRenderPass create_render_pass(VkDevice device, VkFormat format);
 
 #endif
