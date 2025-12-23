@@ -1,8 +1,10 @@
 #include <vulkan/vulkan.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "custom_type.h"
+#include "file.h"
 #include "shader.h"
 
 VkShaderModule create_shader_module(VkDevice device, char* file_path)

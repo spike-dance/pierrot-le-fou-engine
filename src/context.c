@@ -48,6 +48,16 @@ Vulkan_context create_context(GLFWwindow* window)
         if(context.render_pass == VK_NULL_HANDLE)
                 goto ERROR;
 
+        context.frame_buffer = create_frame_buffer(context.device, context.render_pass, context.swapchain_image_view, context.image_count);
+        if(context.frame_buffer == NULL)
+                goto ERROR;
+
+        context.command_pool = create_command_pool(context.device, context.queue_family_indice.graphique);
+
+        vkGetDeviceQueue(context.device, context.queue_family_indice.graphique, 0, &context.graphique_queue);
+
+        context.command_buffer = create_command_buffer(context.device, context.command_pool, context.image_count);
+
         printf("context creation success\n");
 
         return context; //END
@@ -167,7 +177,9 @@ Queue_family_indice find_queue_family(VkPhysicalDevice physical_device)
         for(int i=0; i<queue_family_count; i++)
         {
                 if(queue_family[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                {
                         queue_family_indice.graphique = i;
+                }
 
                 if(queue_family[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
                         queue_family_indice.compute = i;
@@ -399,13 +411,27 @@ VkRenderPass create_render_pass(VkDevice device, VkFormat format)
                         .pColorAttachments = &attachment_ref,
                 };
 
+        VkSubpassDependency dependency =
+                {
+                        .srcSubpass = VK_SUBPASS_EXTERNAL,
+                        .dstSubpass = 0,
+
+                        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .srcAccessMask = 0,
+
+                        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+                };
+
         VkRenderPassCreateInfo create_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
                         .attachmentCount = 1,
                         .pAttachments = &attachment,
                         .subpassCount = 1,
-                        .pSubpasses = subpass
+                        .pSubpasses = &subpass
+                        //.dependencyCount = 1,
+                        //.pDependencies = &dependency
                 };
 
         VkResult result = vkCreateRenderPass(device, &create_info, NULL, &render_pass);
@@ -417,13 +443,88 @@ VkRenderPass create_render_pass(VkDevice device, VkFormat format)
         return render_pass;
 }
 
+VkFramebuffer* create_frame_buffer(VkDevice device, VkRenderPass render_pass, VkImageView* swapchain_image_view, int image_count)
+{
+        VkFramebuffer* frame_buffer = malloc(sizeof(VkFramebuffer) * image_count);
+
+        VkFramebufferCreateInfo create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                        .renderPass = render_pass,
+                        .attachmentCount = 1,
+                        .width = 800,
+                        .height = 500,
+                        .layers = 1
+                };
+
+        for(int i=0; i<image_count; i++)
+        {
+                create_info.pAttachments = &swapchain_image_view[i];
+                VkResult result = vkCreateFramebuffer(device, &create_info, NULL, &frame_buffer[i]);
+                if(result != VK_SUCCESS)
+                {
+                        fprintf(stderr, "Error : frame buffer [%d] creation failed [%d] \"%s\"\n", i, result, get_vulkan_error(result));
+                        return NULL;
+                }
+        }
+
+        return frame_buffer;
+}
+
+VkCommandPool create_command_pool(VkDevice device, int queue_family_indice)
+{
+        VkCommandPool command_pool;
+
+        VkCommandPoolCreateInfo create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                        .queueFamilyIndex = queue_family_indice,
+                };
+
+        VkResult result = vkCreateCommandPool(device, &create_info, NULL, &command_pool);
+        if(result != VK_SUCCESS)
+        {
+                fprintf(stderr, "Error : command pool creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                return VK_NULL_HANDLE;
+        }
+        return command_pool;
+}
+
+VkCommandBuffer* create_command_buffer(VkDevice device, VkCommandPool command_pool, int image_count)
+{
+        VkCommandBuffer* command_buffer = malloc(sizeof(VkCommandBuffer) * image_count);
+
+        VkCommandBufferAllocateInfo alloc_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                        .commandPool = command_pool,
+                        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                        .commandBufferCount = image_count
+                };
+
+        VkResult result = vkAllocateCommandBuffers(device, &alloc_info, command_buffer);
+        if(result != VK_SUCCESS)
+        {
+                fprintf(stderr, "Error : command buffer creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                return NULL;
+        }
+        return command_buffer;
+}
+
 void clear_context(Vulkan_context context)
 {
+
         for(int i=0; i<context.image_count; i++)
         {
+                vkDestroyFramebuffer(context.device, context.frame_buffer[i], NULL);
                 vkDestroyImageView(context.device, context.swapchain_image_view[i], NULL);
         }
 
+        vkDestroyCommandPool(context.device, context.command_pool, NULL);
+        vkDestroyRenderPass(context.device, context.render_pass, NULL);
+
+        free(context.command_buffer);
+        free(context.frame_buffer);
         free(context.swapchain_image);
         free(context.swapchain_image_view);
 

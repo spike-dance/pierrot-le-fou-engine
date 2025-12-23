@@ -1,10 +1,15 @@
 #include <vulkan/vulkan.h>
 
+#include <stdio.h>
+
 #include "graphique_pipeline.h"
+#include "error.h"
 #include "shader.h"
 
-void create_vert_frag_graphique_pipeline(VkDevice device, char* vertex_file_path, char* fragment_file_path)
+Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRenderPass render_pass, char* vertex_file_path, char* fragment_file_path)
 {
+        Graphique_pipeline graphique_pipeline = {0};
+
         VkShaderModule vertex_shader_module = create_shader_module(device, vertex_file_path);
         VkShaderModule fragment_shader_module = create_shader_module(device, fragment_file_path);
 
@@ -107,7 +112,7 @@ void create_vert_frag_graphique_pipeline(VkDevice device, char* vertex_file_path
                         .colorBlendOp = VK_BLEND_OP_ADD,
                         .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
                         .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                        .alphaBlendOp = VK_BLEND_OP_ADD
+                        .alphaBlendOp = VK_BLEND_OP_ADD,
 
                         .blendEnable = VK_TRUE,
                         .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
@@ -125,11 +130,12 @@ void create_vert_frag_graphique_pipeline(VkDevice device, char* vertex_file_path
                         .logicOp = VK_LOGIC_OP_COPY,
                         .attachmentCount = 1,
                         .pAttachments = &color_blend_attachment,
-                        .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f};
+                        .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f}
                 };
 
         VkDynamicState dynamic_state[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_LINE_WIDTH};
-        VkPipelineDynamicStateCreateInfo dynamic_state =
+
+        VkPipelineDynamicStateCreateInfo dynamic_state_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
                         .dynamicStateCount = 2,
@@ -141,15 +147,51 @@ void create_vert_frag_graphique_pipeline(VkDevice device, char* vertex_file_path
                         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO
                 };
 
-        VkPipelineLayout pipeline_layout;
-
-        VkResult result = vkCreatePipelineLayout(device, &pipeline_layout_info, NULL, &pipeline_layout);
+        VkResult result = vkCreatePipelineLayout(device, &pipeline_layout_info, NULL, &graphique_pipeline.layout);
         if(result != VK_SUCCESS)
         {
                 fprintf(stderr, "Error : pipeline layout creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
-                return;
+                return graphique_pipeline;
+        }
+
+        VkGraphicsPipelineCreateInfo create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                        .stageCount = 1,
+                        .pStages = shader_stage_info,
+
+                        .pVertexInputState = &vertex_input_info,
+                        .pInputAssemblyState = &input_assembly,
+                        .pViewportState = &viewport_state,
+                        .pRasterizationState = &rasterizer,
+                        .pMultisampleState = &multisampling,
+                        .pDepthStencilState = NULL,
+                        .pColorBlendState = &color_blend,
+                        .pDynamicState = NULL,
+
+                        .layout = graphique_pipeline.layout,
+
+                        .renderPass = render_pass,
+                        .subpass = 0,
+                        .basePipelineHandle = VK_NULL_HANDLE,
+                        .basePipelineIndex = -1,
+                };
+
+        result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &create_info, NULL, &graphique_pipeline.pipeline);
+        if(result != VK_SUCCESS)
+        {
+                fprintf(stderr, "Error : graphique pipeline creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                return graphique_pipeline;
         }
 
         vkDestroyShaderModule(device, fragment_shader_module, NULL);
         vkDestroyShaderModule(device, vertex_shader_module, NULL);
+
+        return graphique_pipeline;
+}
+
+void clear_graphique_pipeline(VkDevice device, Graphique_pipeline graphique_pipeline)
+{
+        vkDestroyPipeline(device, graphique_pipeline.pipeline, NULL);
+        vkDestroyPipelineLayout(device, graphique_pipeline.layout, NULL);
 }

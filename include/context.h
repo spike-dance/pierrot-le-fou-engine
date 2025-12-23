@@ -46,6 +46,10 @@ typedef struct Vulkan_context
 
         VkRenderPass render_pass;
 
+        VkFramebuffer* frame_buffer;
+
+        VkCommandPool command_pool;
+        VkCommandBuffer* command_buffer;
 } Vulkan_context;
 
 Vulkan_context create_context(GLFWwindow* window);
@@ -55,6 +59,7 @@ void clear_context(Vulkan_context context);
 VkInstance create_instance();
 
 VkPhysicalDevice find_physical_device(VkInstance instance);
+
 bool is_physical_device_usable(VkPhysicalDevice physical_device);
 
 Queue_family_indice find_queue_family(VkPhysicalDevice physical_device);
@@ -68,5 +73,11 @@ VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice devic
 VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchain_format, VkImage* swapchain_image, int image_count);
 
 VkRenderPass create_render_pass(VkDevice device, VkFormat format);
+
+VkFramebuffer* create_frame_buffer(VkDevice device, VkRenderPass render_pass, VkImageView* swapchain_image_view, int image_count);
+
+VkCommandPool create_command_pool(VkDevice device, int queue_family_indice);
+
+VkCommandBuffer* create_command_buffer(VkDevice device, VkCommandPool command_pool, int image_count);
 
 #endif

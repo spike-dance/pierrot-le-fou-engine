@@ -2,5 +2,10 @@
 
 !*/
 
+!CMakeLists.txt
+!.gitignore
+!README.md
 !src/*.c
 !include/*.h
+!test-shader/*.frag
+!test-shader/*.vert
