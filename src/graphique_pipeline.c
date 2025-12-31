@@ -157,7 +157,7 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRender
         VkGraphicsPipelineCreateInfo create_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-                        .stageCount = 1,
+                        .stageCount = 2,
                         .pStages = shader_stage_info,
 
                         .pVertexInputState = &vertex_input_info,
@@ -167,7 +167,7 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRender
                         .pMultisampleState = &multisampling,
                         .pDepthStencilState = NULL,
                         .pColorBlendState = &color_blend,
-                        .pDynamicState = NULL,
+                        .pDynamicState = &dynamic_state_info,
 
                         .layout = graphique_pipeline.layout,
 

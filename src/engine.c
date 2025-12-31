@@ -2,10 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <cglm/cglm.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
+#include <my_std.h>
 
 #include "engine.h"
 #include "context.h"
@@ -63,7 +60,13 @@ Main_state engine_loop()
                         };
                 vkBeginCommandBuffer(context.command_buffer[i], &begin_info);
 
-                VkClearValue clear_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+                VkClearValue clear_color = {0};
+                if(i==0)
+                clear_color.color.float32[0] = 1.0f;
+                if(i==1)
+                clear_color.color.float32[1]= 1.0f;
+                if(i==2)
+                clear_color.color.float32[2]= 1.0f;
                 VkRenderPassBeginInfo render_pass_info =
                         {
                                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -79,6 +82,18 @@ Main_state engine_loop()
 
                         };
 
+                VkViewport viewport =
+                        {
+                                .x = 0.0f,
+                                .y = 0.0f,
+
+                                .width = 800.0f,
+                                .height = 500.0f,
+                                .minDepth = 0.0f,
+                                .maxDepth = 1.0f
+                        };
+
+                vkCmdSetViewport(context.command_buffer[i], 0, 1, &viewport);
                 vkCmdBeginRenderPass(context.command_buffer[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
                 vkCmdBindPipeline(context.command_buffer[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphique_pipeline.pipeline);
                 vkCmdDraw(context.command_buffer[i], 3, 1, 0, 0);
@@ -144,7 +159,8 @@ Main_state engine_loop()
                 glfwPollEvents();
         }
 
-        auto a=context.swapchain_image_view[0];
+        vkQueueWaitIdle(context.graphique_queue);
+        vkDeviceWaitIdle(context.device);
 
         vkDestroySemaphore(context.device, image_available_semaphore, NULL);
         vkDestroySemaphore(context.device, render_over_semaphore, NULL);

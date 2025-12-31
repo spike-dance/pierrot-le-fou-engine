@@ -10,7 +10,6 @@ set(SOURCE src/main.c
         src/engine.c
         src/graphique_pipeline.c
         src/shader.c
-        src/file.c
         src/context.c
         src/vulkan_error.c)
 
@@ -21,4 +20,4 @@ if(DEBUG)
         target_compile_definitions(${BIN} PUBLIC DEBUG)
 endif()
 
-target_link_libraries(${BIN} glfw vulkan)
+target_link_libraries(${BIN} my_std glfw vulkan)

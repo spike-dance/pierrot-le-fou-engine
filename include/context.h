@@ -3,7 +3,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <stdbool.h>
+#include <my_std.h>
 
 #include "error.h"
 
@@ -17,11 +17,23 @@ typedef struct Queue_family_indice
 
 } Queue_family_indice;
 
+#ifdef DEBUG
+typedef struct
+{
+        FILE* verbose_stream;
+        FILE* info_stream;
+        FILE* warning_stream;
+        FILE* error_stream;
+} Vulkan_debug_callback_user_arg;
+#endif
+
 typedef struct Vulkan_context
 {
         Error_enum error;
 
         VkInstance instance;
+        VkDebugUtilsMessengerEXT debug_callback;
+        Vulkan_debug_callback_user_arg debug_callback_arg;
 
         VkPhysicalDevice physical_device;
 
@@ -79,5 +91,11 @@ VkFramebuffer* create_frame_buffer(VkDevice device, VkRenderPass render_pass, Vk
 VkCommandPool create_command_pool(VkDevice device, int queue_family_indice);
 
 VkCommandBuffer* create_command_buffer(VkDevice device, VkCommandPool command_pool, int image_count);
+
+VkDebugUtilsMessengerEXT create_vulkan_debug_callback(VkInstance instance, Vulkan_debug_callback_user_arg* user_arg);
+
+#ifdef DEBUG
+VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, Vulkan_debug_callback_user_arg* pUserData);
+#endif
 
 #endif

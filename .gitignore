@@ -5,6 +5,7 @@
 !CMakeLists.txt
 !.gitignore
 !README.md
+!compile_shader.sh
 !src/*.c
 !include/*.h
 !test-shader/*.frag

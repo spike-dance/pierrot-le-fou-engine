@@ -4,8 +4,11 @@
 extern int global_argc;
 extern char** global_argv;
 
+extern int debug_extension_count;
+
 #ifdef DEBUG
 extern int validation_layer_count;
+extern const char* debug_extension_name [];
 extern const char* validation_layer [];
 #endif
 

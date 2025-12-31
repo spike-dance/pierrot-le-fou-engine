@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdint.h>
 
 #include "context.h"
 #include "error.h"
@@ -12,11 +11,13 @@
 
 Vulkan_context create_context(GLFWwindow* window)
 {
-        Vulkan_context context = {.swap_extent = {800,500}};
+        Vulkan_context context = {.swap_extent = {800,500}, .debug_callback_arg={.verbose_stream = stdout, .info_stream = stdout, .warning_stream = stdout, .error_stream=stderr}};
 
         context.instance = create_instance();
         if(context.instance == VK_NULL_HANDLE)
                 goto ERROR;
+
+        context.debug_callback = create_vulkan_debug_callback(context.instance, &context.debug_callback_arg);
 
         context.physical_device = find_physical_device(context.instance);
         if(context.physical_device == VK_NULL_HANDLE)
@@ -63,7 +64,6 @@ Vulkan_context create_context(GLFWwindow* window)
         return context; //END
 //__________________________________________________
 
-
 ERROR:
         context.error = CREATION_FAILED;
         return context;
@@ -77,22 +77,27 @@ VkInstance create_instance()
                         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
                         .pApplicationName = "Scene",
                         .applicationVersion = VK_MAKE_VERSION(1,0,0),
-                        .pEngineName = "bebop engine",
+                        .pEngineName = "pierrot le fou engine",
                         .engineVersion = VK_MAKE_VERSION(1,0,0),
                         .apiVersion = VK_API_VERSION_1_0
                 };
 
-        int extention_count = 0;
-        const char** glfw_extension = glfwGetRequiredInstanceExtensions(&extention_count);
-        const char** extention = malloc(sizeof(char*) * (extention_count+1));
+        int glfw_extension_count = 0;
+        const char** glfw_extension = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
+        const char** extension = malloc(sizeof(char*) * (glfw_extension_count+debug_extension_count));
 
-        for(int i=0; i<extention_count; i++)
+        for(int i=0; i<glfw_extension_count; i++)
         {
-                printf("extention glfw %s\n", glfw_extension[i]);
-                extention[i] = glfw_extension[i];
+                printf("extension glfw %s\n", glfw_extension[i]);
+                extension[i] = glfw_extension[i];
         }
 
-        extention[extention_count] = "VK_EXT_debug_utils";
+#ifdef DEBUG
+        for(int i=glfw_extension_count; i<glfw_extension_count+debug_extension_count; i++)
+        {
+                extension[i] = debug_extension_name[i-glfw_extension_count];
+        }
+#endif
 
 
         int layer_count;
@@ -110,11 +115,13 @@ VkInstance create_instance()
                 {
                         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                         .pApplicationInfo = &app_info,
-                        .enabledExtensionCount = extention_count+1,
-                        .ppEnabledExtensionNames = extention,
+                        .enabledExtensionCount = glfw_extension_count+debug_extension_count,
+                        .ppEnabledExtensionNames = extension,
 
+                #ifdef DEBUG
                         .enabledLayerCount = validation_layer_count,
                         .ppEnabledLayerNames = validation_layer,
+                #endif
 
                 };
 
@@ -127,6 +134,91 @@ VkInstance create_instance()
 
         return instance;
 }
+
+#ifdef DEBUG
+VkDebugUtilsMessengerEXT create_vulkan_debug_callback(VkInstance instance, Vulkan_debug_callback_user_arg* user_arg)
+{
+        VkDebugUtilsMessengerCreateInfoEXT create_info =
+                {
+                        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT,
+                        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+                        .pfnUserCallback = (PFN_vkDebugUtilsMessengerCallbackEXT) vulkan_debug_callback,
+                        .pUserData = user_arg
+                };
+
+        PFN_vkCreateDebugUtilsMessengerEXT create_debug_callback_fn = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+        if(create_debug_callback_fn == NULL)
+                return VK_NULL_HANDLE;
+
+        VkDebugUtilsMessengerEXT debug_callback;
+        VkResult result = create_debug_callback_fn(instance, &create_info, NULL, &debug_callback);
+        if(result != VK_SUCCESS)
+        {
+                fprintf(stderr, ANSI_RED_TEXT("Error") " : debug callback creation failed [%d] %s\n", result, get_vulkan_error(result));
+                return VK_NULL_HANDLE;
+        }
+        return debug_callback;
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, Vulkan_debug_callback_user_arg* pUserData)
+{
+        FILE* output_stream;
+
+        fprintf(stderr, ANSI_GREEN_TEXT("message severity")" %d==%d     %d\n", messageSeverity, 4096, messageSeverity == 4096);
+
+        if(messageSeverity == 4096)
+{
+                printf("what the fuck\n");
+        }
+
+        switch(messageSeverity)
+        {
+                case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+                        printf(ANSI_BLUE_TEXT("verbose "));
+                        output_stream = pUserData->verbose_stream;
+                        break;
+                case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+                        printf(ANSI_BLUE_TEXT("info "));
+                        output_stream = pUserData->info_stream;
+                        break;
+                case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+                        printf(ANSI_BLUE_TEXT("warning "));
+                        output_stream = pUserData->warning_stream;
+                        break;
+                case 4096:
+                        printf(ANSI_BLUE_TEXT("error "));
+                        output_stream = pUserData->error_stream;
+        }
+
+        /*if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT && pUserData->verbose_stream)
+        {
+                printf(ANSI_BLUE_TEXT("verbose "));
+                output_stream = pUserData->verbose_stream;
+        }
+        else if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT && pUserData->info_stream)
+        {
+                printf(ANSI_BLUE_TEXT("info "));
+                output_stream = pUserData->info_stream;
+        }
+        else if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT && pUserData->warning_stream)
+        {
+                printf(ANSI_BLUE_TEXT("warning "));
+                output_stream = pUserData->warning_stream;
+        }
+        else// if(messageSeverity == 4096 || pUserData->error_stream)
+        {
+                printf(ANSI_BLUE_TEXT("error "));
+                output_stream = pUserData->error_stream;
+        }*/
+
+        fprintf(stderr, "test\n");
+        fprintf(output_stream, ANSI_RED_TEXT("validation layer") " : \n"/*, pCallbackData->pMessage*/);
+        fprintf(stderr, "test2\n");
+
+        return VK_FALSE;
+}
+#endif
 
 VkPhysicalDevice find_physical_device(VkInstance instance)
 {

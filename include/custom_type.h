@@ -1,7 +1,7 @@
 #ifndef CUSTOM_TYPE_H
 #define CUSTOM_TYPE_H
 
-#include <stddef.h>
+#include <my_std.h>
 
 #include "error.h"
 

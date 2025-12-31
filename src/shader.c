@@ -4,14 +4,13 @@
 #include <stdlib.h>
 
 #include "custom_type.h"
-#include "file.h"
 #include "shader.h"
 
 VkShaderModule create_shader_module(VkDevice device, char* file_path)
 {
         VkShaderModule shader_module;
 
-        Buffer file_content = read_file(file_path);
+        String file_content = read_file(file_path);
         if(file_content.error != NO_ERROR)
                 return VK_NULL_HANDLE;
 
