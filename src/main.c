@@ -1,60 +1,61 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <my_std.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdint.h>
 
 #include "main_type.h"
 #include "global_variable.h"
 #include "engine.h"
+#include "error.h"
 
-int main(int argc, char** argv)
+i32 main(i32 argc, char** vv_argv)
 {
-        int return_value = 0;
+        i32 returnValue = 0;
 
-        manage_main_arg(argc, argv);
+        fn_manageMainArg(argc, vv_argv);
 
+        glfwSetErrorCallback(fn_glfwErrorCallback);
         if(!glfwInit())
         {
                 fprintf(stderr, "glfw cannot be init\n");
-                return_value = -1;
-                goto GLFW_NOT_INIT;
+                returnValue = -1;
+                goto GO_END_GLFW_NOT_INIT;
         }
 
-        Main_state state = ENGINE;
+        E_main e_state = ENGINE;
         bool running = true;
         while(running)
         {
-                switch(state)
+                switch(e_state)
                 {
                         case ENGINE:
-                                state = engine_loop();
+                                e_state = fn_engineLoop();
                                 break;
                         case END:
                                 running = false;
                                 break;
                         default:
-                                if(is_main_state_fatal(state))
+                                if(fn_isMainStateFatal(e_state))
                                 {
                                         running = false;
-                                        return_value = state;
-                                        fprintf(stderr, "fatal error :");
+                                        returnValue = e_state;
+                                        fprintf(stderr, ANSI_RED_TEXT("fatal error :"));
                                 }
 
                                 else
-                                        fprintf(stderr, "error :");
+                                        fprintf(stderr, ANSI_PURPLE_TEXT("error :"));
 
-                                fprintf(stderr, " %d \"%s\"\n", state, get_main_state(state));
+                                fprintf(stderr, " %d \"%s\"\n", e_state, fn_getMainState(e_state));
 
-                                state = main_state_handling(state);
+                                e_state = fn_mainStateHandling(e_state);
                 }
         }
 
         glfwTerminate();
 
-GLFW_NOT_INIT:
-
-        return return_value;
+GO_END_GLFW_NOT_INIT:
+        return returnValue;
 }

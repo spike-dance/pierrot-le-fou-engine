@@ -9,55 +9,64 @@
 #include "error.h"
 #include "global_variable.h"
 
-Vulkan_context create_context(GLFWwindow* window)
+S_vulkanContext create_context(GLFWwindow* window)
 {
-        Vulkan_context context = {.swap_extent = {800,500}, .debug_callback_arg={.verbose_stream = stdout, .info_stream = stdout, .warning_stream = stdout, .error_stream=stderr}};
+        S_vulkanDebugCallbackUserArg* testtest = malloc(sizeof(S_vulkanDebugCallbackUserArg));
+        testtest->verbose_stream = stdout;
+        testtest->info_stream = stdout;
+        testtest->warning_stream = stdout;
+        testtest->error_stream = stdout;
+        S_vulkanContext context = {.s_swapExtent = {800,500}, .ps_debugCallbackArg = testtest, .maxImageInFlight = 2};
 
         context.instance = create_instance();
         if(context.instance == VK_NULL_HANDLE)
                 goto ERROR;
 
-        context.debug_callback = create_vulkan_debug_callback(context.instance, &context.debug_callback_arg);
+        context.debugCallback = create_vulkan_debug_callback(context.instance, context.ps_debugCallbackArg);
 
-        context.physical_device = find_physical_device(context.instance);
-        if(context.physical_device == VK_NULL_HANDLE)
+        context.physicalDevice = find_physical_device(context.instance);
+        if(context.physicalDevice == VK_NULL_HANDLE)
                 goto ERROR;
 
-        context.queue_family_indice = find_queue_family(context.physical_device);
-        if(context.queue_family_indice.error == CREATION_FAILED)
+        context.s_queueFamilyIndice = find_queue_family(context.physicalDevice);
+        if(context.s_queueFamilyIndice.error == CREATION_FAILED)
                 goto ERROR;
 
-        context.device = create_device(context.physical_device, context.queue_family_indice);
+        context.device = create_device(context.physicalDevice, context.s_queueFamilyIndice);
         if(context.device == VK_NULL_HANDLE)
                 goto ERROR;
 
         glfwCreateWindowSurface(context.instance, window, NULL, &context.surface);
 
-        context.swapchain = create_swapchain(context.physical_device, context.device, context.surface, &context.swapchain_format);
+        context.swapchain = create_swapchain(context.physicalDevice, context.device, context.surface, &context.swapchainFormat);
         if(context.swapchain == VK_NULL_HANDLE)
                 goto ERROR;
 
-        vkGetSwapchainImagesKHR(context.device, context.swapchain, &context.image_count, NULL);
-        context.swapchain_image = malloc(sizeof(VkImage) * context.image_count);
-        vkGetSwapchainImagesKHR(context.device, context.swapchain, &context.image_count, context.swapchain_image);
+        vkGetSwapchainImagesKHR(context.device, context.swapchain, &context.imageCount, NULL);
+        context.v_swapchainImage = malloc(sizeof(VkImage) * context.imageCount);
+        vkGetSwapchainImagesKHR(context.device, context.swapchain, &context.imageCount, context.v_swapchainImage);
 
-        context.swapchain_image_view = get_swapchain_image_view(context.device, context.swapchain, context.swapchain_format, context.swapchain_image, context.image_count);
-        if(context.swapchain_image_view == NULL)
+        context.v_swapchainImageView = get_swapchain_image_view(context.device, context.swapchain, context.swapchainFormat, context.v_swapchainImage, context.imageCount);
+        if(context.v_swapchainImageView == NULL)
                 goto ERROR;
 
-        context.render_pass = create_render_pass(context.device, context.swapchain_format);
-        if(context.render_pass == VK_NULL_HANDLE)
+
+        context.renderPass = create_render_pass(context.device, context.swapchainFormat);
+        if(context.renderPass == VK_NULL_HANDLE)
                 goto ERROR;
 
-        context.frame_buffer = create_frame_buffer(context.device, context.render_pass, context.swapchain_image_view, context.image_count);
-        if(context.frame_buffer == NULL)
+        context.v_frameBuffer = create_frame_buffer(context.device, context.renderPass, context.v_swapchainImageView, context.imageCount);
+        if(context.v_frameBuffer == NULL)
                 goto ERROR;
 
-        context.command_pool = create_command_pool(context.device, context.queue_family_indice.graphique);
 
-        vkGetDeviceQueue(context.device, context.queue_family_indice.graphique, 0, &context.graphique_queue);
+        context.commandPool = create_command_pool(context.device, context.s_queueFamilyIndice.graphique);
 
-        context.command_buffer = create_command_buffer(context.device, context.command_pool, context.image_count);
+        vkGetDeviceQueue(context.device, context.s_queueFamilyIndice.graphique, 0, &context.graphiqueQueue);
+
+        context.v_commandBuffer = create_command_buffer(context.device, context.commandPool, context.imageCount);
+
+        fn_createSemaphore(&context);
 
         printf("context creation success\n");
 
@@ -82,9 +91,9 @@ VkInstance create_instance()
                         .apiVersion = VK_API_VERSION_1_0
                 };
 
-        int glfw_extension_count = 0;
+        u32 glfw_extension_count = 0;
         const char** glfw_extension = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
-        const char** extension = malloc(sizeof(char*) * (glfw_extension_count+debug_extension_count));
+        const char** extension = malloc(sizeof(char*) * (glfw_extension_count+gc_debugExtensionCount));
 
         for(int i=0; i<glfw_extension_count; i++)
         {
@@ -93,14 +102,14 @@ VkInstance create_instance()
         }
 
 #ifdef DEBUG
-        for(int i=glfw_extension_count; i<glfw_extension_count+debug_extension_count; i++)
+        for(int i=glfw_extension_count; i<glfw_extension_count+gc_debugExtensionCount; i++)
         {
-                extension[i] = debug_extension_name[i-glfw_extension_count];
+                extension[i] = gcvv_debugExtensionName[i-glfw_extension_count];
         }
 #endif
 
 
-        int layer_count;
+        u32 layer_count;
         vkEnumerateInstanceLayerProperties(&layer_count, NULL);
         VkLayerProperties* layer = malloc(sizeof(VkLayerProperties) * layer_count);
         vkEnumerateInstanceLayerProperties(&layer_count, layer);
@@ -115,12 +124,12 @@ VkInstance create_instance()
                 {
                         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
                         .pApplicationInfo = &app_info,
-                        .enabledExtensionCount = glfw_extension_count+debug_extension_count,
+                        .enabledExtensionCount = glfw_extension_count+gc_debugExtensionCount,
                         .ppEnabledExtensionNames = extension,
 
                 #ifdef DEBUG
-                        .enabledLayerCount = validation_layer_count,
-                        .ppEnabledLayerNames = validation_layer,
+                        .enabledLayerCount = gc_validationLayerCount,
+                        .ppEnabledLayerNames = gcvv_validationLayer,
                 #endif
 
                 };
@@ -128,7 +137,7 @@ VkInstance create_instance()
         VkResult result = vkCreateInstance(&create_info, NULL, &instance);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Instance creation failed %d \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Instance creation failed %d \"%s\"\n", result, fn_getVulkanError(result));
                 return VK_NULL_HANDLE;
         }
 
@@ -136,7 +145,7 @@ VkInstance create_instance()
 }
 
 #ifdef DEBUG
-VkDebugUtilsMessengerEXT create_vulkan_debug_callback(VkInstance instance, Vulkan_debug_callback_user_arg* user_arg)
+VkDebugUtilsMessengerEXT create_vulkan_debug_callback(VkInstance instance, S_vulkanDebugCallbackUserArg* user_arg)
 {
         VkDebugUtilsMessengerCreateInfoEXT create_info =
                 {
@@ -155,66 +164,41 @@ VkDebugUtilsMessengerEXT create_vulkan_debug_callback(VkInstance instance, Vulka
         VkResult result = create_debug_callback_fn(instance, &create_info, NULL, &debug_callback);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, ANSI_RED_TEXT("Error") " : debug callback creation failed [%d] %s\n", result, get_vulkan_error(result));
+                fprintf(stderr, ANSI_RED_TEXT("Error") " : debug callback creation failed [%d] %s\n", result, fn_getVulkanError(result));
                 return VK_NULL_HANDLE;
         }
         return debug_callback;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, Vulkan_debug_callback_user_arg* pUserData)
+VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, S_vulkanDebugCallbackUserArg* pUserData)
 {
-        FILE* output_stream;
-
-        fprintf(stderr, ANSI_GREEN_TEXT("message severity")" %d==%d     %d\n", messageSeverity, 4096, messageSeverity == 4096);
-
-        if(messageSeverity == 4096)
-{
-                printf("what the fuck\n");
-        }
+        FILE* output_stream = NULL;
 
         switch(messageSeverity)
         {
                 case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-                        printf(ANSI_BLUE_TEXT("verbose "));
                         output_stream = pUserData->verbose_stream;
+                        fprintf(output_stream, ANSI_BLUE_TEXT("verbose "));
                         break;
                 case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-                        printf(ANSI_BLUE_TEXT("info "));
                         output_stream = pUserData->info_stream;
+                        fprintf(output_stream, ANSI_BLUE_TEXT("info "));
                         break;
                 case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-                        printf(ANSI_BLUE_TEXT("warning "));
                         output_stream = pUserData->warning_stream;
+                        fprintf(output_stream, ANSI_BLUE_TEXT("warning "));
                         break;
-                case 4096:
-                        printf(ANSI_BLUE_TEXT("error "));
+                case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
                         output_stream = pUserData->error_stream;
+                        fprintf(output_stream, ANSI_BLUE_TEXT("error "));
+                case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
+                        break;
         }
 
-        /*if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT && pUserData->verbose_stream)
-        {
-                printf(ANSI_BLUE_TEXT("verbose "));
-                output_stream = pUserData->verbose_stream;
-        }
-        else if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT && pUserData->info_stream)
-        {
-                printf(ANSI_BLUE_TEXT("info "));
-                output_stream = pUserData->info_stream;
-        }
-        else if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT && pUserData->warning_stream)
-        {
-                printf(ANSI_BLUE_TEXT("warning "));
-                output_stream = pUserData->warning_stream;
-        }
-        else// if(messageSeverity == 4096 || pUserData->error_stream)
-        {
-                printf(ANSI_BLUE_TEXT("error "));
-                output_stream = pUserData->error_stream;
-        }*/
+        if(output_stream == NULL)
+                return VK_FALSE;
 
-        fprintf(stderr, "test\n");
-        fprintf(output_stream, ANSI_RED_TEXT("validation layer") " : \n"/*, pCallbackData->pMessage*/);
-        fprintf(stderr, "test2\n");
+        fprintf(output_stream, ANSI_RED_TEXT("validation layer") " : %s\n", pCallbackData->pMessage);
 
         return VK_FALSE;
 }
@@ -224,7 +208,7 @@ VkPhysicalDevice find_physical_device(VkInstance instance)
 {
         VkPhysicalDevice physical_device;
 
-        int physical_device_count;
+        u32 physical_device_count;
         vkEnumeratePhysicalDevices(instance, &physical_device_count, NULL);
         if(physical_device_count == 0)
         {
@@ -252,16 +236,16 @@ bool is_physical_device_usable(VkPhysicalDevice physical_device)
         return true;
 }
 
-Queue_family_indice find_queue_family(VkPhysicalDevice physical_device)
+S_queueFamilyIndice find_queue_family(VkPhysicalDevice physical_device)
 {
-        Queue_family_indice queue_family_indice =
+        S_queueFamilyIndice queue_family_indice =
                 {
                         .graphique = -1,
                         .compute = -1,
                         .transfert = -1,
                 };
 
-        int queue_family_count;
+        u32 queue_family_count;
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, NULL);
         VkQueueFamilyProperties* queue_family = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, queue_family);
@@ -291,7 +275,7 @@ Queue_family_indice find_queue_family(VkPhysicalDevice physical_device)
         return queue_family_indice;
 }
 
-VkDevice create_device(VkPhysicalDevice physical_device, Queue_family_indice queue_family_indice)
+VkDevice create_device(VkPhysicalDevice physical_device, S_queueFamilyIndice queue_family_indice)
 {
         VkDevice device;
 
@@ -322,13 +306,13 @@ VkDevice create_device(VkPhysicalDevice physical_device, Queue_family_indice que
 
                 };
 
-        printf("validation_layer = %d\n", validation_layer_count);
-        printf("\n\n%s\n\n", validation_layer[0]);
+        printf("validation_layer = %d\n", gc_validationLayerCount);
+        printf("\n\n%s\n\n", gcvv_validationLayer[0]);
 
         VkResult result = vkCreateDevice(physical_device, &create_info, NULL, &device);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : physical device creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : physical device creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return VK_NULL_HANDLE;
         }
 
@@ -345,7 +329,7 @@ VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice devic
         VkSurfaceFormatKHR* format_vec;
         VkSurfaceFormatKHR format;
 
-        int format_count;
+        u32 format_count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, NULL);
         format_vec = malloc(sizeof(VkSurfaceFormatKHR) * format_count);
         vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, format_vec);
@@ -374,7 +358,7 @@ VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice devic
         VkPresentModeKHR* present_mode_vec;
         VkPresentModeKHR present_mode;
 
-        int present_mode_count;
+        u32 present_mode_count;
         vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, NULL);
         present_mode_vec = malloc(sizeof(VkPresentModeKHR) * present_mode_count);
         vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &present_mode_count, present_mode_vec);
@@ -424,7 +408,7 @@ VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice devic
         VkResult result = vkCreateSwapchainKHR(device, &create_info, NULL, &swapchain);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : swap chain creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : swap chain creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return VK_NULL_HANDLE;
         }
         *swapchain_format = format.format;
@@ -463,7 +447,7 @@ VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain,
                 VkResult result = vkCreateImageView(device, &create_info, NULL, &swapchain_image_view[i]);
                 if(result != VK_SUCCESS)
                 {
-                        fprintf(stderr, "Error : image view %d creation failed [%d] \"%s\"\n", i, result, get_vulkan_error(result));
+                        fprintf(stderr, "Error : image view %d creation failed [%d] \"%s\"\n", i, result, fn_getVulkanError(result));
                         return NULL;
                 }
         }
@@ -503,7 +487,7 @@ VkRenderPass create_render_pass(VkDevice device, VkFormat format)
                         .pColorAttachments = &attachment_ref,
                 };
 
-        VkSubpassDependency dependency =
+        /*VkSubpassDependency dependency =
                 {
                         .srcSubpass = VK_SUBPASS_EXTERNAL,
                         .dstSubpass = 0,
@@ -513,7 +497,7 @@ VkRenderPass create_render_pass(VkDevice device, VkFormat format)
 
                         .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
-                };
+                };*/
 
         VkRenderPassCreateInfo create_info =
                 {
@@ -529,7 +513,7 @@ VkRenderPass create_render_pass(VkDevice device, VkFormat format)
         VkResult result = vkCreateRenderPass(device, &create_info, NULL, &render_pass);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : render pass creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : render pass creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return VK_NULL_HANDLE;
         }
         return render_pass;
@@ -555,7 +539,7 @@ VkFramebuffer* create_frame_buffer(VkDevice device, VkRenderPass render_pass, Vk
                 VkResult result = vkCreateFramebuffer(device, &create_info, NULL, &frame_buffer[i]);
                 if(result != VK_SUCCESS)
                 {
-                        fprintf(stderr, "Error : frame buffer [%d] creation failed [%d] \"%s\"\n", i, result, get_vulkan_error(result));
+                        fprintf(stderr, "Error : frame buffer [%d] creation failed [%d] \"%s\"\n", i, result, fn_getVulkanError(result));
                         return NULL;
                 }
         }
@@ -576,7 +560,7 @@ VkCommandPool create_command_pool(VkDevice device, int queue_family_indice)
         VkResult result = vkCreateCommandPool(device, &create_info, NULL, &command_pool);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : command pool creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : command pool creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return VK_NULL_HANDLE;
         }
         return command_pool;
@@ -597,31 +581,107 @@ VkCommandBuffer* create_command_buffer(VkDevice device, VkCommandPool command_po
         VkResult result = vkAllocateCommandBuffers(device, &alloc_info, command_buffer);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : command buffer creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : command buffer creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return NULL;
         }
         return command_buffer;
 }
 
-void clear_context(Vulkan_context context)
+void fn_createSemaphore(S_vulkanContext* ps_context)
 {
+        ps_context->v_renderOverSemaphore = malloc(sizeof(VkSemaphore) * ps_context->maxImageInFlight);
+        ps_context->v_presentOverSemaphore = malloc(sizeof(VkSemaphore) * ps_context->maxImageInFlight);
+        ps_context->v_inFlightFence = malloc(sizeof(VkFence) * ps_context->maxImageInFlight);
 
-        for(int i=0; i<context.image_count; i++)
+        VkSemaphoreCreateInfo s_semaphoreCreateInfo =
+                {
+                        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+                };
+
+        VkFenceCreateInfo s_fenceCreateInfo =
+                {
+                        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+                };
+
+        for(int i=0; i<ps_context->maxImageInFlight; i++)
         {
-                vkDestroyFramebuffer(context.device, context.frame_buffer[i], NULL);
-                vkDestroyImageView(context.device, context.swapchain_image_view[i], NULL);
+                VkResult result = vkCreateSemaphore(ps_context->device, &s_semaphoreCreateInfo, NULL, &ps_context->v_renderOverSemaphore[i]);
+                if(result != VK_SUCCESS)
+                {
+                        fprintf(stderr, ANSI_RED_TEXT("Vulkan error :") " Semaphore creation failed [%d] %s\n", result, fn_getVulkanError(result));
+                        goto GO_END_ERROR;
+                }
+                result = vkCreateSemaphore(ps_context->device, &s_semaphoreCreateInfo, NULL, &ps_context->v_presentOverSemaphore[i]);
+                if(result != VK_SUCCESS)
+                {
+                        fprintf(stderr, ANSI_RED_TEXT("Vulkan error :") " Semaphore creation failed [%d] %s\n", result, fn_getVulkanError(result));
+                        goto GO_END_ERROR;
+                }
+
+                result = vkCreateFence(ps_context->device, &s_fenceCreateInfo, NULL, &ps_context->v_inFlightFence[i]);
+                if(result != VK_SUCCESS)
+                {
+                        fprintf(stderr, ANSI_RED_TEXT("Vulkan error :") " Fence creation failed [%d] %s\n", result, fn_getVulkanError(result));
+                        goto GO_END_ERROR;
+                }
         }
 
-        vkDestroyCommandPool(context.device, context.command_pool, NULL);
-        vkDestroyRenderPass(context.device, context.render_pass, NULL);
+        for(int i=0; i<ps_context->imageCount; i++)
+                ps_context->v_imageInFlightFence = VK_NULL_HANDLE;
 
-        free(context.command_buffer);
-        free(context.frame_buffer);
-        free(context.swapchain_image);
-        free(context.swapchain_image_view);
+        return;
+//__________________________________________________
+
+GO_END_ERROR:
+        free(ps_context->v_renderOverSemaphore);
+        free(ps_context->v_presentOverSemaphore);
+        free(ps_context->v_inFlightFence);
+
+        ps_context->v_renderOverSemaphore = NULL;
+        ps_context->v_presentOverSemaphore = NULL;
+        ps_context->v_inFlightFence = NULL;
+}
+
+void clear_context(S_vulkanContext context)
+{
+
+        printf("clear context\n");
+
+        for(int i=0; i<context.maxImageInFlight; i++)
+        {
+                vkDestroySemaphore(context.device, context.v_renderOverSemaphore[i], NULL);
+                vkDestroySemaphore(context.device, context.v_presentOverSemaphore[i], NULL);
+                vkDestroyFence(context.device, context.v_inFlightFence[i], NULL);
+        }
+
+        free(context.v_renderOverSemaphore);
+        free(context.v_presentOverSemaphore);
+        free(context.v_inFlightFence);
+
+        for(int i=0; i<context.imageCount; i++)
+        {
+                vkDestroyFramebuffer(context.device, context.v_frameBuffer[i], NULL);
+                vkDestroyImageView(context.device, context.v_swapchainImageView[i], NULL);
+        }
+
+        vkDestroyCommandPool(context.device, context.commandPool, NULL);
+        vkDestroyRenderPass(context.device, context.renderPass, NULL);
+
+        free(context.v_commandBuffer);
+        free(context.v_frameBuffer);
+        free(context.v_swapchainImage);
+        free(context.v_swapchainImageView);
+
+        printf("clear context\n");
 
         vkDestroySwapchainKHR(context.device, context.swapchain, NULL);
         vkDestroySurfaceKHR(context.instance, context.surface, NULL);
         vkDestroyDevice(context.device, NULL);
+
+        free(context.ps_debugCallbackArg);
+        const PFN_vkDestroyDebugUtilsMessengerEXT cpfn_vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(context.instance, "vkDestroyDebugUtilsMessengerEXT");
+        cpfn_vkDestroyDebugUtilsMessengerEXT(context.instance, context.debugCallback, NULL);
+
         vkDestroyInstance(context.instance, NULL);
 }

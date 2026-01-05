@@ -7,12 +7,12 @@ typedef enum
 {
         ENGINE,
         END
-} Main_state;
+} E_main;
 
-bool is_main_state_fatal(Main_state state);
+bool fn_isMainStateFatal(E_main e_state);
 
-char* get_main_state(Main_state state);
+char* fn_getMainState(E_main e_state);
 
-Main_state main_state_handling(Main_state state);
+E_main fn_mainStateHandling(E_main e_state);
 
 #endif

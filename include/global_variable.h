@@ -1,17 +1,19 @@
 #ifndef GLOBAL_VARIABLE_H
 #define GLOBAL_VARIABLE_H
 
-extern int global_argc;
-extern char** global_argv;
+#include <my_std.h>
 
-extern int debug_extension_count;
+extern i32 g_argc;
+extern char** gvv_argv;
+
+extern cu32 gc_debugExtensionCount;
 
 #ifdef DEBUG
-extern int validation_layer_count;
-extern const char* debug_extension_name [];
-extern const char* validation_layer [];
+extern const char* gcvv_debugExtensionName [];
+extern const char* gcvv_validationLayer [];
+extern cu32 gc_validationLayerCount;
 #endif
 
-void manage_main_arg(int argc, char** argv);
+void fn_manageMainArg(i32 argc, char** argv);
 
 #endif

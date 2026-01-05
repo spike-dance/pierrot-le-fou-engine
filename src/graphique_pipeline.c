@@ -150,7 +150,7 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRender
         VkResult result = vkCreatePipelineLayout(device, &pipeline_layout_info, NULL, &graphique_pipeline.layout);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : pipeline layout creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : pipeline layout creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return graphique_pipeline;
         }
 
@@ -180,7 +180,7 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRender
         result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &create_info, NULL, &graphique_pipeline.pipeline);
         if(result != VK_SUCCESS)
         {
-                fprintf(stderr, "Error : graphique pipeline creation failed [%d] \"%s\"\n", result, get_vulkan_error(result));
+                fprintf(stderr, "Error : graphique pipeline creation failed [%d] \"%s\"\n", result, fn_getVulkanError(result));
                 return graphique_pipeline;
         }
 

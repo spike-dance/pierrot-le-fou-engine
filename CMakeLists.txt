@@ -3,6 +3,7 @@ project(pierrot-le-fou-engine)
 
 include_directories(include)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_C_FLAGS "-Wall")
 
 set(SOURCE src/main.c
         src/global_variable.c
@@ -11,7 +12,9 @@ set(SOURCE src/main.c
         src/graphique_pipeline.c
         src/shader.c
         src/context.c
-        src/vulkan_error.c)
+        src/vulkan_error.c
+        src/glfw_error.c
+)
 
 set(BIN pierrot)
 

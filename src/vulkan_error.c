@@ -1,6 +1,6 @@
 #include <vulkan/vulkan.h>
 
-const char* get_vulkan_error(VkResult result)
+const char* fn_getVulkanError(VkResult result)
 {
         switch(result)
         {
@@ -102,6 +102,10 @@ const char* get_vulkan_error(VkResult result)
                         return "VK_PIPELINE_BINARY_MISSING_KHR";
                 case VK_ERROR_NOT_ENOUGH_SPACE_KHR:
                         return "VK_ERROR_NOT_ENOUGH_SPACE_KHR";
+                case VK_ERROR_OUT_OF_HOST_MEMORY:
+                        return "VK_ERROR_OUT_OF_HOST_MEMORY";
+                case VK_RESULT_MAX_ENUM:
+                        return "VK_RESULT_MAX_ENUM";
         }
         return "No error";
 }

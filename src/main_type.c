@@ -2,14 +2,14 @@
 
 #include <main_type.h>
 
-bool is_main_state_fatal(Main_state state)
+bool fn_isMainStateFatal(E_main e_state)
 {
         return true;
 }
 
-char* get_main_state(Main_state state)
+char* fn_getMainState(E_main e_state)
 {
-        switch(state)
+        switch(e_state)
         {
                 case ENGINE:
                         return "engine loop";
@@ -19,7 +19,7 @@ char* get_main_state(Main_state state)
         return "undefine state enum";
 }
 
-Main_state main_state_handling(Main_state state)
+E_main fn_mainStateHandling(E_main e_state)
 {
         return END;
 }

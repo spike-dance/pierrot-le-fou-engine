@@ -1,23 +1,23 @@
+#include <my_std.h>
 #include <stdio.h>
 
 #include "error.h"
 #include "global_variable.h"
 
-int global_argc = 0;
-char** global_argv = NULL;
-
+i32 g_argc = 0;
+char** gvv_argv = NULL;
 
 #ifdef DEBUG
-int debug_extension_count = 1;
-int validation_layer_count = 1;
-const char* debug_extension_name [] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
-const char* validation_layer [] = {"VK_LAYER_KHRONOS_validation"};
+const char* gcvv_debugExtensionName [] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME };
+const char* gcvv_validationLayer [] = {"VK_LAYER_KHRONOS_validation"};
+cu32 gc_validationLayerCount = 1;
+cu32 gc_debugExtensionCount = 1;
 #else
-int debug_extension_count = 0;
+cu32 gc_debugExtensionCount = 0;
 #endif
 
-void manage_main_arg(int argc, char** argv)
+void fn_manageMainArg(i32 argc, char** argv)
 {
-        global_argc = argc;
-        global_argv = argv;
+        g_argc = argc;
+        gvv_argv = argv;
 }

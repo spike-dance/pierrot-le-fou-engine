@@ -3,6 +3,6 @@
 
 #include <vulkan/vulkan.h>
 
-VkShaderModule create_shader_module(VkDevice device, char* file_path);
+VkShaderModule create_shader_module(VkDevice device, const char* file_path);
 
 #endif

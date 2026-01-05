@@ -3,6 +3,6 @@
 
 #include "main_type.h"
 
-Main_state engine_loop();
+E_main fn_engineLoop();
 
 #endif

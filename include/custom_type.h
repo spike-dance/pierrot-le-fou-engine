@@ -9,7 +9,7 @@ typedef struct
 {
         void* buffer;
         size_t size;
-        Error_enum error;
+        E_error error;
 } Buffer;
 
 #endif
