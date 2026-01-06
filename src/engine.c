@@ -154,7 +154,7 @@ E_main fn_engineLoop()
                                 .pSignalSemaphores = signal_semaphore,
                         };
 
-                vkResetFences(s_context.device, 1, &
+                vkResetFences(s_context.device, 1, &s_context.v_imageInFlightFence[swapchainImageIndex]);
                 VkResult result = vkQueueSubmit(s_context.graphiqueQueue, 1, &submit_info, VK_NULL_HANDLE);
                 if(result != VK_SUCCESS)
                 {
