@@ -67,7 +67,7 @@ typedef struct
         VkSemaphore* v_renderOverSemaphore;
         VkSemaphore* v_presentOverSemaphore;
         VkFence* v_inFlightFence;
-        VkFence* v_imageInFlightFence
+        VkFence* v_imageInFlightFence;
 } S_vulkanContext;
 
 S_vulkanContext create_context(GLFWwindow* window);

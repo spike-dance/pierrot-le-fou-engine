@@ -171,7 +171,7 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRender
 
                         .layout = graphique_pipeline.layout,
 
-                        .renderPass = render_pass,
+                        .renderPass = VK_NULL_HANDLE,
                         .subpass = 0,
                         .basePipelineHandle = VK_NULL_HANDLE,
                         .basePipelineIndex = -1,

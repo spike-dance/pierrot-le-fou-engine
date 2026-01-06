@@ -128,6 +128,8 @@ E_main fn_engineLoop()
 
 
 
+                printf("value %p\n", s_context.v_imageInFlightFence[swapchainImageIndex]);
+                printf("error : test\n");
                 if(s_context.v_imageInFlightFence[swapchainImageIndex] != VK_NULL_HANDLE)
                         vkWaitForFences(s_context.device, 1, &s_context.v_imageInFlightFence[swapchainImageIndex], VK_TRUE, UINT64_MAX);
 
@@ -155,7 +157,7 @@ E_main fn_engineLoop()
                         };
 
                 vkResetFences(s_context.device, 1, &s_context.v_imageInFlightFence[swapchainImageIndex]);
-                VkResult result = vkQueueSubmit(s_context.graphiqueQueue, 1, &submit_info, VK_NULL_HANDLE);
+                VkResult result = vkQueueSubmit(s_context.graphiqueQueue, 1, &submit_info, s_context.v_imageInFlightFence[swapchainImageIndex]);
                 if(result != VK_SUCCESS)
                 {
                         fprintf(stderr, "Error : command buffer submition failed [%d] \"%s\"\n", result, fn_getVulkanError(result));

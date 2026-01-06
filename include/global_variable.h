@@ -6,6 +6,9 @@
 extern i32 g_argc;
 extern char** gvv_argv;
 
+extern const char* gcvv_deviceExtension [];
+extern cu32 gc_deviceExtensionCount;
+
 extern cu32 gc_debugExtensionCount;
 
 #ifdef DEBUG

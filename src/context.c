@@ -51,6 +51,7 @@ S_vulkanContext create_context(GLFWwindow* window)
                 goto ERROR;
 
 
+        /*
         context.renderPass = create_render_pass(context.device, context.swapchainFormat);
         if(context.renderPass == VK_NULL_HANDLE)
                 goto ERROR;
@@ -58,6 +59,7 @@ S_vulkanContext create_context(GLFWwindow* window)
         context.v_frameBuffer = create_frame_buffer(context.device, context.renderPass, context.v_swapchainImageView, context.imageCount);
         if(context.v_frameBuffer == NULL)
                 goto ERROR;
+                */
 
 
         context.commandPool = create_command_pool(context.device, context.s_queueFamilyIndice.graphique);
@@ -88,7 +90,7 @@ VkInstance create_instance()
                         .applicationVersion = VK_MAKE_VERSION(1,0,0),
                         .pEngineName = "pierrot le fou engine",
                         .engineVersion = VK_MAKE_VERSION(1,0,0),
-                        .apiVersion = VK_API_VERSION_1_0
+                        .apiVersion = VK_API_VERSION_1_3
                 };
 
         u32 glfw_extension_count = 0;
@@ -292,7 +294,6 @@ VkDevice create_device(VkPhysicalDevice physical_device, S_queueFamilyIndice que
 
         VkPhysicalDeviceFeatures device_feature = {0};
 
-        const char* device_extension [] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
         VkDeviceCreateInfo create_info =
                 {
@@ -301,13 +302,10 @@ VkDevice create_device(VkPhysicalDevice physical_device, S_queueFamilyIndice que
                         .queueCreateInfoCount = 1,
                         .pEnabledFeatures = &device_feature,
 
-                        .enabledExtensionCount = 1,
-                        .ppEnabledExtensionNames = device_extension,
+                        .enabledExtensionCount = gc_deviceExtensionCount,
+                        .ppEnabledExtensionNames = gcvv_deviceExtension,
 
                 };
-
-        printf("validation_layer = %d\n", gc_validationLayerCount);
-        printf("\n\n%s\n\n", gcvv_validationLayer[0]);
 
         VkResult result = vkCreateDevice(physical_device, &create_info, NULL, &device);
         if(result != VK_SUCCESS)
@@ -592,6 +590,7 @@ void fn_createSemaphore(S_vulkanContext* ps_context)
         ps_context->v_renderOverSemaphore = malloc(sizeof(VkSemaphore) * ps_context->maxImageInFlight);
         ps_context->v_presentOverSemaphore = malloc(sizeof(VkSemaphore) * ps_context->maxImageInFlight);
         ps_context->v_inFlightFence = malloc(sizeof(VkFence) * ps_context->maxImageInFlight);
+        ps_context->v_imageInFlightFence = malloc(sizeof(VkFence) * ps_context->imageCount);
 
         VkSemaphoreCreateInfo s_semaphoreCreateInfo =
                 {
@@ -628,7 +627,7 @@ void fn_createSemaphore(S_vulkanContext* ps_context)
         }
 
         for(int i=0; i<ps_context->imageCount; i++)
-                ps_context->v_imageInFlightFence = VK_NULL_HANDLE;
+                ps_context->v_imageInFlightFence[i] = VK_NULL_HANDLE;
 
         return;
 //__________________________________________________

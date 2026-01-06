@@ -21,6 +21,7 @@ set(BIN pierrot)
 add_executable(${BIN} ${SOURCE})
 if(DEBUG)
         target_compile_definitions(${BIN} PUBLIC DEBUG)
+        set(CMAKE_C_FLAGS "-Wall -g")
 endif()
 
 target_link_libraries(${BIN} my_std glfw vulkan)
