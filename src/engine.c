@@ -1,4 +1,4 @@
-#define GLFW_INCLUDE_VULKAN
+#include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <cglm/cglm.h>
 
@@ -62,19 +62,28 @@ E_main fn_engineLoop()
                 clear_color.color.float32[1]= 1.0f;
                 if(i==2)
                 clear_color.color.float32[2]= 1.0f;
-                VkRenderPassBeginInfo render_pass_info =
+
+                VkRenderingAttachmentInfoKHR s_renderingAttachment =
                         {
-                                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                                .renderPass = s_context.renderPass,
-                                .framebuffer = s_context.v_frameBuffer[i],
-                                .renderArea =
+                                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
+                                .imageView = s_context.v_swapchainImageView[i],
+                                .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+                                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                                .clearValue = clear_color
+                        };
+
+                VkRenderingInfoKHR s_renderingInfo = 
+                        {
+                                .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
+                                .renderArea = 
                                 {
                                         .offset = {0,0},
-                                        .extent = {800,500}
+                                        .extent = s_context.s_swapExtent
                                 },
-                                .clearValueCount = 1,
-                                .pClearValues = &clear_color,
-
+                                .layerCount = 1,
+                                .colorAttachmentCount = 1,
+                                .pColorAttachments = &s_renderingAttachment,
                         };
 
                 VkViewport viewport =
@@ -89,7 +98,8 @@ E_main fn_engineLoop()
                         };
 
                 vkCmdSetViewport(s_context.v_commandBuffer[i], 0, 1, &viewport);
-                vkCmdBeginRenderPass(s_context.v_commandBuffer[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+                vkCmdBeginRendering(s_context.v_commandBuffer[i], &s_renderingInfo);
+                //vkCmdBeginRenderPass(s_context.v_commandBuffer[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
                 vkCmdBindPipeline(s_context.v_commandBuffer[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphique_pipeline.pipeline);
                 vkCmdDraw(s_context.v_commandBuffer[i], 3, 1, 0, 0);
                 vkCmdEndRenderPass(s_context.v_commandBuffer[i]);
