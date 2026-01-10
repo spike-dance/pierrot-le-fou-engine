@@ -15,7 +15,7 @@ E_main fn_engineLoop()
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-        GLFWwindow* window = glfwCreateWindow(800, 500, "Scene", NULL, NULL);
+        GLFWwindow* window = glfwCreateWindow(1000, 1000, "Scene", NULL, NULL);
 
         S_vulkanContext s_context = create_context(window);
         if(s_context.error != NO_ERROR)

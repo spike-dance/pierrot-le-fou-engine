@@ -660,15 +660,12 @@ void clear_context(S_vulkanContext context)
 
         for(int i=0; i<context.imageCount; i++)
         {
-                vkDestroyFramebuffer(context.device, context.v_frameBuffer[i], NULL);
                 vkDestroyImageView(context.device, context.v_swapchainImageView[i], NULL);
         }
 
         vkDestroyCommandPool(context.device, context.commandPool, NULL);
-        vkDestroyRenderPass(context.device, context.renderPass, NULL);
 
         free(context.v_commandBuffer);
-        free(context.v_frameBuffer);
         free(context.v_swapchainImage);
         free(context.v_swapchainImageView);
 
