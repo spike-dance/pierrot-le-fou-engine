@@ -11,11 +11,12 @@
 
 S_vulkanContext create_context(GLFWwindow* window)
 {
+        FILE* file = fopen("/dev/null", "w");
         S_vulkanDebugCallbackUserArg* testtest = malloc(sizeof(S_vulkanDebugCallbackUserArg));
-        testtest->verbose_stream = stdout;
-        testtest->info_stream = stdout;
-        testtest->warning_stream = stdout;
-        testtest->error_stream = stdout;
+        testtest->verbose_stream = file;
+        testtest->info_stream = file;
+        testtest->warning_stream = stderr;
+        testtest->error_stream = stderr;
         S_vulkanContext context = {.s_swapExtent = {800,500}, .ps_debugCallbackArg = testtest, .maxImageInFlight = 2};
 
         context.instance = create_instance();
@@ -38,7 +39,7 @@ S_vulkanContext create_context(GLFWwindow* window)
 
         glfwCreateWindowSurface(context.instance, window, NULL, &context.surface);
 
-        context.swapchain = create_swapchain(context.physicalDevice, context.device, context.surface, &context.swapchainFormat);
+        context.swapchain = create_swapchain(context.physicalDevice, context.device, context.surface, context.s_swapExtent, &context.swapchainFormat);
         if(context.swapchain == VK_NULL_HANDLE)
                 goto ERROR;
 
@@ -152,7 +153,7 @@ VkDebugUtilsMessengerEXT create_vulkan_debug_callback(VkInstance instance, S_vul
         VkDebugUtilsMessengerCreateInfoEXT create_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-                        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT,
+                        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT,
                         .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
                         .pfnUserCallback = (PFN_vkDebugUtilsMessengerCallbackEXT) vulkan_debug_callback,
                         .pUserData = user_arg
@@ -294,10 +295,23 @@ VkDevice create_device(VkPhysicalDevice physical_device, S_queueFamilyIndice que
 
         VkPhysicalDeviceFeatures device_feature = {0};
 
+        VkPhysicalDeviceSynchronization2Features sync2Feature =
+                {
+                        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+                        .synchronization2 = VK_TRUE
+                };
+
+        VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeature =
+                {
+                        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+                        .pNext = &sync2Feature,
+                        .dynamicRendering = VK_TRUE
+                };
 
         VkDeviceCreateInfo create_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                        .pNext = &dynamicRenderingFeature,
                         .pQueueCreateInfos = &device_queue_info,
                         .queueCreateInfoCount = 1,
                         .pEnabledFeatures = &device_feature,
@@ -314,10 +328,13 @@ VkDevice create_device(VkPhysicalDevice physical_device, S_queueFamilyIndice que
                 return VK_NULL_HANDLE;
         }
 
+        if(!vkGetDeviceProcAddr(device, "vkCmdBeginRendering"))
+                printf("dynamique not enable \n");
+
         return device;
 }
 
-VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkFormat* swapchain_format)
+VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkExtent2D s_swapExtent, VkFormat* swapchain_format)
 {
         VkSwapchainKHR swapchain;
 
@@ -384,7 +401,7 @@ VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice devic
                         .imageFormat = format.format,
                         .imageColorSpace = format.colorSpace,
                         //.imageExtent = capability.currentExtent,
-                        .imageExtent = {800,500},
+                        .imageExtent = s_swapExtent,
                         .imageArrayLayers = 1,
                         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 
@@ -515,34 +532,6 @@ VkRenderPass create_render_pass(VkDevice device, VkFormat format)
                 return VK_NULL_HANDLE;
         }
         return render_pass;
-}
-
-VkFramebuffer* create_frame_buffer(VkDevice device, VkRenderPass render_pass, VkImageView* swapchain_image_view, int image_count)
-{
-        VkFramebuffer* frame_buffer = malloc(sizeof(VkFramebuffer) * image_count);
-
-        VkFramebufferCreateInfo create_info =
-                {
-                        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                        .renderPass = render_pass,
-                        .attachmentCount = 1,
-                        .width = 800,
-                        .height = 500,
-                        .layers = 1
-                };
-
-        for(int i=0; i<image_count; i++)
-        {
-                create_info.pAttachments = &swapchain_image_view[i];
-                VkResult result = vkCreateFramebuffer(device, &create_info, NULL, &frame_buffer[i]);
-                if(result != VK_SUCCESS)
-                {
-                        fprintf(stderr, "Error : frame buffer [%d] creation failed [%d] \"%s\"\n", i, result, fn_getVulkanError(result));
-                        return NULL;
-                }
-        }
-
-        return frame_buffer;
 }
 
 VkCommandPool create_command_pool(VkDevice device, int queue_family_indice)

@@ -86,7 +86,7 @@ S_queueFamilyIndice find_queue_family(VkPhysicalDevice physical_device);
 
 VkDevice create_device(VkPhysicalDevice physical_device, S_queueFamilyIndice queue_family_indice);
 
-VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkFormat* swapchain_format);
+VkSwapchainKHR create_swapchain(VkPhysicalDevice physical_device, VkDevice device, VkSurfaceKHR surface, VkExtent2D s_swapExtent, VkFormat* swapchain_format);
 
 VkImageView* get_swapchain_image_view(VkDevice device, VkSwapchainKHR swapchain, VkFormat swapchain_format, VkImage* swapchain_image, int image_count);
 

@@ -6,7 +6,7 @@
 #include "error.h"
 #include "shader.h"
 
-Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRenderPass render_pass, char* vertex_file_path, char* fragment_file_path)
+Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkFormat swapchainFormat, char* vertex_file_path, char* fragment_file_path)
 {
         Graphique_pipeline graphique_pipeline = {0};
 
@@ -154,9 +154,18 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkRender
                 return graphique_pipeline;
         }
 
+        VkPipelineRenderingCreateInfoKHR pipelineRenderingInfo =
+                {
+                        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+                        .colorAttachmentCount = 1,
+                        .pColorAttachmentFormats = &swapchainFormat
+                        
+                };
+
         VkGraphicsPipelineCreateInfo create_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                        .pNext = &pipelineRenderingInfo,
                         .stageCount = 2,
                         .pStages = shader_stage_info,
 

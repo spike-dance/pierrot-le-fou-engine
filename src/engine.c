@@ -15,7 +15,8 @@ E_main fn_engineLoop()
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-        GLFWwindow* window = glfwCreateWindow(1000, 1000, "Scene", NULL, NULL);
+        GLFWwindow* window = glfwCreateWindow(800, 800, "Scene", NULL, NULL);
+        glfwSetWindowSize(window, 800, 500);
 
         S_vulkanContext s_context = create_context(window);
         if(s_context.error != NO_ERROR)
@@ -25,7 +26,7 @@ E_main fn_engineLoop()
         }
 
 
-        Graphique_pipeline graphique_pipeline = create_vert_frag_graphique_pipeline(s_context.device, s_context.renderPass, "test-shader/vert.spv", "test-shader/frag.spv");
+        Graphique_pipeline graphique_pipeline = create_vert_frag_graphique_pipeline(s_context.device, s_context.swapchainFormat, "test-shader/vert.spv", "test-shader/frag.spv");
 
 
 
@@ -97,12 +98,56 @@ E_main fn_engineLoop()
                                 .maxDepth = 1.0f
                         };
 
-                vkCmdSetViewport(s_context.v_commandBuffer[i], 0, 1, &viewport);
+                VkImageMemoryBarrier s_imageBarrier =
+                        {
+                                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                                .srcAccessMask = 0,
+                                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                                .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+                                .image = s_context.v_swapchainImage[i],
+                                .subresourceRange =
+                                {
+                                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                        .baseMipLevel = 0,
+                                        .levelCount = 1,
+                                        .baseArrayLayer = 0,
+                                        .layerCount = 1,
+                                }
+                        };
+                vkCmdPipelineBarrier(s_context.v_commandBuffer[i], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, NULL, 0, NULL, 1, &s_imageBarrier);
+
                 vkCmdBeginRendering(s_context.v_commandBuffer[i], &s_renderingInfo);
+                vkCmdSetViewport(s_context.v_commandBuffer[i], 0, 1, &viewport);
                 //vkCmdBeginRenderPass(s_context.v_commandBuffer[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
                 vkCmdBindPipeline(s_context.v_commandBuffer[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphique_pipeline.pipeline);
                 vkCmdDraw(s_context.v_commandBuffer[i], 3, 1, 0, 0);
-                vkCmdEndRenderPass(s_context.v_commandBuffer[i]);
+                vkCmdEndRendering(s_context.v_commandBuffer[i]);
+VkImageMemoryBarrier toPresent = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    .dstAccessMask = 0,
+    .oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+    .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    .image = s_context.v_swapchainImage[i],
+    .subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    }
+};
+
+vkCmdPipelineBarrier(
+    s_context.v_commandBuffer[i],
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+    0,
+    0, NULL,
+    0, NULL,
+    1, &toPresent
+);
                 vkEndCommandBuffer(s_context.v_commandBuffer[i]);
         }
 
@@ -138,8 +183,6 @@ E_main fn_engineLoop()
 
 
 
-                printf("value %p\n", s_context.v_imageInFlightFence[swapchainImageIndex]);
-                printf("error : test\n");
                 if(s_context.v_imageInFlightFence[swapchainImageIndex] != VK_NULL_HANDLE)
                         vkWaitForFences(s_context.device, 1, &s_context.v_imageInFlightFence[swapchainImageIndex], VK_TRUE, UINT64_MAX);
 
@@ -198,6 +241,7 @@ E_main fn_engineLoop()
         clear_graphique_pipeline(s_context.device, graphique_pipeline);
 
         clear_context(s_context);
+
 
 GO_END_WINDOW_CREATED:
         glfwDestroyWindow(window);
