@@ -1,4 +1,5 @@
 #include <vulkan/vulkan.h>
+#include <cglm/cglm.h>
 
 #include <stdio.h>
 
@@ -31,13 +32,51 @@ Graphique_pipeline create_vert_frag_graphique_pipeline(VkDevice device, VkFormat
 
         VkPipelineShaderStageCreateInfo shader_stage_info[] = {vertex_shader_stage_info, fragment_shader_stage_info};
 
+
+
+
+
+
+
+
+
+        vec2 v_vertice [3] =
+                {
+                        {-1.0f, -1.0f},
+                        {0.0f, 1.0f},
+                        {1.0f, -1.0f}
+                };
+        VkVertexInputBindingDescription bindingDescription =
+                {
+                        .binding = 0,
+                        .stride = sizeof(vec2),
+                        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+                };
+
+        VkVertexInputAttributeDescription attributeDescription =
+                {
+                        .binding = 0,
+                        .location = 0,
+                        .format = VK_FORMAT_R32G32_SFLOAT,
+                        .offset = 0
+                };
+
+
+
+
+
+
+
+
+
+
         VkPipelineVertexInputStateCreateInfo vertex_input_info =
                 {
                         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-                        .vertexBindingDescriptionCount = 0,
-                        .pVertexBindingDescriptions = NULL,
-                        .vertexAttributeDescriptionCount = 0,
-                        .pVertexAttributeDescriptions = NULL,
+                        .vertexBindingDescriptionCount = 1,
+                        .pVertexBindingDescriptions = &bindingDescription,
+                        .vertexAttributeDescriptionCount = 1,
+                        .pVertexAttributeDescriptions = &attributeDescription,
                 };
 
         VkPipelineInputAssemblyStateCreateInfo input_assembly =

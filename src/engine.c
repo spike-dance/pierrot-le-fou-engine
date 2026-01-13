@@ -163,6 +163,19 @@ vkCmdPipelineBarrier(
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
         u32 semaphoreIndex = 0;
         bool running = true;
         while(!glfwWindowShouldClose(window))
